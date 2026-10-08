@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recruiting Agent Control Tower | SW-06</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            surface: {
+              900: '#090d16',
+              850: '#0e1422',
+              800: '#141d30',
+              750: '#1b263e',
+              700: '#23314f',
+              600: '#324468'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #23314f; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #324468; }
+    
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse-subtle { animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.2); }
+      50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.4); }
+    }
+    .agent-active-glow { animation: glow 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-surface-900 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- TOP APP BAR -->
+  <header class="border-b border-surface-700 bg-surface-850/90 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Logo & System Tag -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <div class="w-full h-full bg-surface-900 rounded-[10px] flex items-center justify-center">
+            <svg class="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base font-bold tracking-tight text-white">RECRUITING AGENT CONTROL TOWER</h1>
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">SW-06</span>
+          </div>
+          <p class="text-xs text-slate-400">Autonomous Orchestration & Human-in-the-Loop Governance</p>
+        </div>
+      </div>
+
+      <!-- Quick Metrics & ATS Status -->
+      <div class="hidden xl:flex items-center space-x-6 text-xs">
+        <div class="flex items-center space-x-2 bg-surface-800/60 px-3 py-1.5 rounded-lg border border-surface-700">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-slate-400">Orchestrator:</span>
+          <span class="font-medium text-emerald-400">Healthy (4 Active, 1 Idle)</span>
+        </div>
+        <div class="flex items-center space-x-2 bg-surface-800/60 px-3 py-1.5 rounded-lg border border-surface-700">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span class="text-slate-400">ATS Sync:</span>
+          <span class="font-medium text-cyan-300">Greenhouse & Ashby (Live)</span>
+        </div>
+        <div class="flex items-center space-x-2 bg-surface-800/60 px-3 py-1.5 rounded-lg border border-surface-700">
+          <span class="text-slate-400">Pending Approvals:</span>
+          <span id="top-badge-hitl" class="font-bold text-amber-400 px-1.5 py-0.2 rounded bg-amber-500/20 border border-amber-500/30">2</span>
+        </div>
+      </div>
+
+      <!-- Simulation Action Center -->
+      <div class="flex items-center space-x-3">
+        <button id="btn-trigger-sim" onclick="simulateFullPipeline()" class="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow-md shadow-indigo-600/30 hover:scale-[1.02]">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Run Live Simulation</span>
+        </button>
+
+        <button onclick="resetSimulation()" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-750 text-slate-300 hover:text-white border border-surface-700 transition" title="Reset Demo Data">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="border-b border-surface-700 bg-surface-850 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-[1720px] mx-auto flex space-x-1 sm:space-x-4 overflow-x-auto">
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn active-tab border-b-2 border-indigo-500 text-indigo-400 font-semibold text-sm py-3 px-3 flex items-center space-x-2 transition whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+        <span>Command Center</span>
+      </button>
+
+      <button onclick="switchTab('pipeline')" id="tab-btn-pipeline" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm py-3 px-3 flex items-center space-x-2 transition whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+        </svg>
+        <span>Workflow & Pipeline</span>
+        <span id="pipeline-count-badge" class="ml-1 px-1.5 py-0.5 text-xs bg-surface-750 text-indigo-300 rounded-full">14</span>
+      </button>
+
+      <button onclick="switchTab('hitl')" id="tab-btn-hitl" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm py-3 px-3 flex items-center space-x-2 transition whitespace-nowrap">
+        <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span>HITL Exceptions & Approvals</span>
+        <span id="nav-badge-hitl" class="ml-1 px-2 py-0.5 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full font-bold">2</span>
+      </button>
+
+      <button onclick="switchTab('registry')" id="tab-btn-registry" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm py-3 px-3 flex items-center space-x-2 transition whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        <span>Agent & Human Registry</span>
+        <span class="ml-1 px-1.5 py-0.5 text-xs bg-surface-750 text-slate-300 rounded-full">8</span>
+      </button>
+
+      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm py-3 px-3 flex items-center space-x-2 transition whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <span>Funnel Analytics</span>
+      </button>
+
+      <button onclick="switchTab('audit')" id="tab-btn-audit" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 font-medium text-sm py-3 px-3 flex items-center space-x-2 transition whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Audit Timeline</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-[1720px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- NOTIFICATION TOAST BAR -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: COMMAND CENTER (DASHBOARD)        -->
+    <!-- ========================================== -->
+    <div id="view-dashboard" class="view-panel space-y-6">
+      
+      <!-- TOP KPI CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-surface-850 border border-surface-700/80 rounded-xl p-5 shadow-sm relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Requisitions</span>
+            <span class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-bold text-white">4</span>
+            <span class="text-xs text-rose-400 font-medium">2 P0 Urgent</span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Target Headcount: 8 hires | 100% SLA covered</p>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-cyan-400"></div>
+        </div>
+
+        <div class="bg-surface-850 border border-surface-700/80 rounded-xl p-5 shadow-sm relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Agents Online</span>
+            <span class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span id="metric-agents-active" class="text-3xl font-bold text-white">4 / 5</span>
+            <span class="text-xs text-emerald-400 font-medium">80% Capacity</span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">128 candidates processed today across 4 agents</p>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+        </div>
+
+        <div class="bg-surface-850 border border-surface-700/80 rounded-xl p-5 shadow-sm relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">HITL Exceptions</span>
+            <span class="p-2 bg-amber-500/10 text-amber-400 rounded-lg">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            </span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span id="metric-hitl-count" class="text-3xl font-bold text-amber-400">2</span>
+            <span class="text-xs text-amber-300 font-medium">Awaiting Recruiter</span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Avg resolution time: 4.2 mins | 0 SLA breaches</p>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-500"></div>
+        </div>
+
+        <div class="bg-surface-850 border border-surface-700/80 rounded-xl p-5 shadow-sm relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Shortlisted to Interview</span>
+            <span class="p-2 bg-cyan-500/10 text-cyan-400 rounded-lg">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </span>
+          </div>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span id="metric-shortlisted-count" class="text-3xl font-bold text-white">18</span>
+            <span class="text-xs text-emerald-400 font-medium">+5 this week</span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">83% positive candidate engagement rate</p>
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-cyan-500"></div>
+        </div>
+
+      </div>
+
+      <!-- LIVE AGENT STATUS GRID -->
+      <div class="bg-surface-850 border border-surface-700 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-sm font-bold text-white tracking-wide uppercase flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+              <span>Active Agent Fleet & Dispatch Status</span>
+            </h2>
+            <p class="text-xs text-slate-400">Real-time telemetry, current requisition assignments, and live throughput</p>
+          </div>
+          <div class="flex items-center space-x-2 text-xs text-slate-400">
+            <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span> Working</span>
+            <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5"></span> HITL Wait</span>
+            <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-slate-500 mr-1.5"></span> Standby</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="agent-cards-container">
+          <!-- Agent Card 1: Sourcing -->
+          <div id="card-agent-sourcing" class="bg-surface-800 border border-surface-700 rounded-lg p-4 transition hover:border-indigo-500/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="p-1.5 rounded-md bg-indigo-500/20 text-indigo-400">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </span>
+                <span class="font-semibold text-sm text-white">Sourcing Agent</span>
+              </div>
+              <span id="badge-agent-sourcing" class="px-2 py-0.5 text-xs rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Active</span>
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-slate-400" id="task-agent-sourcing">Scanning GitHub & LinkedIn for Distributed Systems Engineers</p>
+            <div class="mt-3 pt-3 border-t border-surface-700/60 flex items-center justify-between text-xs">
+              <span class="text-slate-400">Processed: <strong class="text-white" id="stat-agent-sourcing-count">48</strong></span>
+              <span class="text-slate-400">Latency: <strong class="text-emerald-400">1.2s</strong></span>
+            </div>
+          </div>
+
+          <!-- Agent Card 2: Verification -->
+          <div id="card-agent-verification" class="bg-surface-800 border border-surface-700 rounded-lg p-4 transition hover:border-indigo-500/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="p-1.5 rounded-md bg-purple-500/20 text-purple-400">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                <span class="font-semibold text-sm text-white">Verification Agent</span>
+              </div>
+              <span id="badge-agent-verification" class="px-2 py-0.5 text-xs rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Active</span>
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-slate-400" id="task-agent-verification">Calibrating repository commits & tenure consistency</p>
+            <div class="mt-3 pt-3 border-t border-surface-700/60 flex items-center justify-between text-xs">
+              <span class="text-slate-400">Verified: <strong class="text-white" id="stat-agent-verification-count">36</strong></span>
+              <span class="text-slate-400">Avg Match: <strong class="text-indigo-300">88%</strong></span>
+            </div>
+          </div>
+
+          <!-- Agent Card 3: Outreach -->
+          <div id="card-agent-outreach" class="bg-surface-800 border border-surface-700 rounded-lg p-4 transition hover:border-indigo-500/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="p-1.5 rounded-md bg-cyan-500/20 text-cyan-400">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </span>
+                <span class="font-semibold text-sm text-white">Outreach Agent</span>
+              </div>
+              <span id="badge-agent-outreach" class="px-2 py-0.5 text-xs rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span>Awaiting Review</span>
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-slate-400" id="task-agent-outreach">Drafting personalized hook referencing Raft consensus paper</p>
+            <div class="mt-3 pt-3 border-t border-surface-700/60 flex items-center justify-between text-xs">
+              <span class="text-slate-400">Drafted: <strong class="text-white" id="stat-agent-outreach-count">24</strong></span>
+              <span class="text-slate-400">Reply Rate: <strong class="text-cyan-300">42%</strong></span>
+            </div>
+          </div>
+
+          <!-- Agent Card 4: Scheduling -->
+          <div id="card-agent-scheduling" class="bg-surface-800 border border-surface-700 rounded-lg p-4 transition hover:border-indigo-500/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="p-1.5 rounded-md bg-emerald-500/20 text-emerald-400">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </span>
+                <span class="font-semibold text-sm text-white">Scheduling Agent</span>
+              </div>
+              <span id="badge-agent-scheduling" class="px-2 py-0.5 text-xs rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>Active</span>
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-slate-400" id="task-agent-scheduling">Negotiating time slots for 3 candidates with Hiring Lead</p>
+            <div class="mt-3 pt-3 border-t border-surface-700/60 flex items-center justify-between text-xs">
+              <span class="text-slate-400">Booked: <strong class="text-white" id="stat-agent-scheduling-count">12</strong></span>
+              <span class="text-slate-400">Turnaround: <strong class="text-emerald-400">22 min</strong></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TWO-COLUMN SECTION: OPEN JOBS & RECENT AUDIT TICKER -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left 2 Cols: Requisitions Orchestration Board -->
+        <div class="lg:col-span-2 bg-surface-850 border border-surface-700 rounded-xl p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide uppercase flex items-center space-x-2">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <span>Requisitions & Workload Dispatcher</span>
+              </h2>
+              <p class="text-xs text-slate-400">Priority-driven task queue with dynamic SLA auto-escalation</p>
+            </div>
+            <span class="text-xs text-slate-400 bg-surface-800 px-3 py-1 rounded-md border border-surface-700">Sorted by Urgency / SLA</span>
+          </div>
+
+          <div class="space-y-3" id="requisition-list-container">
+            <!-- Job 1: P0 Urgent -->
+            <div class="p-4 rounded-lg bg-surface-800/80 border border-rose-500/30 hover:border-rose-500/60 transition flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">P0 URGENT</span>
+                  <h3 class="text-sm font-bold text-white">Staff Distributed Systems Engineer</h3>
+                  <span class="text-xs text-slate-400">REQ-8021</span>
+                </div>
+                <p class="text-xs text-slate-400">Infrastructure Core • Target: 2 hires • Recruiter: Sarah Chen (Lead)</p>
+                <div class="flex items-center space-x-4 text-xs text-slate-300 pt-1">
+                  <span>SLA Remaining: <strong class="text-rose-400">14 hours</strong></span>
+                  <span>Active Agents: <span class="text-indigo-400 font-semibold">4 Allocated</span></span>
+                  <span>Shortlist: <span class="text-emerald-400 font-semibold">3 ready</span></span>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2 self-end md:self-center">
+                <button onclick="switchTab('pipeline')" class="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-medium transition">View Workflow</button>
+                <button onclick="triggerUrgentDispatch('REQ-8021')" class="px-3 py-1.5 rounded-lg bg-surface-750 hover:bg-surface-700 text-slate-200 text-xs transition border border-surface-600">Re-calibrate Agents</button>
+              </div>
+            </div>
+
+            <!-- Job 2: P1 High -->
+            <div class="p-4 rounded-lg bg-surface-800/80 border border-surface-700 hover:border-surface-600 transition flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">P1 HIGH</span>
+                  <h3 class="text-sm font-bold text-white">Lead AI / ML Evaluation Scientist</h3>
+                  <span class="text-xs text-slate-400">REQ-7940</span>
+                </div>
+                <p class="text-xs text-slate-400">Applied AI Lab • Target: 1 hire • Recruiter: Alex Rivera</p>
+                <div class="flex items-center space-x-4 text-xs text-slate-300 pt-1">
+                  <span>SLA Remaining: <strong class="text-amber-400">3 days</strong></span>
+                  <span>Active Agents: <span class="text-indigo-400 font-semibold">3 Allocated</span></span>
+                  <span>Shortlist: <span class="text-emerald-400 font-semibold">5 ready</span></span>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2 self-end md:self-center">
+                <button onclick="switchTab('pipeline')" class="px-3 py-1.5 rounded-lg bg-surface-750 hover:bg-surface-700 text-slate-200 text-xs transition border border-surface-600">View Workflow</button>
+              </div>
+            </div>
+
+            <!-- Job 3: P2 Normal -->
+            <div class="p-4 rounded-lg bg-surface-800/80 border border-surface-700 hover:border-surface-600 transition flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-500/20 text-slate-300 border border-slate-500/40">P2 NORMAL</span>
+                  <h3 class="text-sm font-bold text-white">Senior Product Designer (Design Systems)</h3>
+                  <span class="text-xs text-slate-400">REQ-7882</span>
+                </div>
+                <p class="text-xs text-slate-400">Product Experience • Target: 1 hire • Recruiter: David Kim</p>
+                <div class="flex items-center space-x-4 text-xs text-slate-300 pt-1">
+                  <span>SLA Remaining: <strong class="text-slate-400">8 days</strong></span>
+                  <span>Active Agents: <span class="text-indigo-400 font-semibold">2 Allocated</span></span>
+                  <span>Shortlist: <span class="text-emerald-400 font-semibold">4 ready</span></span>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2 self-end md:self-center">
+                <button onclick="switchTab('pipeline')" class="px-3 py-1.5 rounded-lg bg-surface-750 hover:bg-surface-700 text-slate-200 text-xs transition border border-surface-600">View Workflow</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Col: Live Activity Stream / Audit Ticker -->
+        <div class="bg-surface-850 border border-surface-700 rounded-xl p-5 shadow-sm space-y-4 flex flex-col">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white tracking-wide uppercase flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Live Control Plane Feed</span>
+            </h2>
+            <button onclick="switchTab('audit')" class="text-xs text-indigo-400 hover:underline">View All</button>
+          </div>
+          <p class="text-xs text-slate-400">Real-time trace of agent decisions, handoffs, and escalations</p>
+
+          <div id="dashboard-feed-container" class="space-y-3 flex-1 overflow-y-auto max-h-[380px] pr-1">
+            <!-- Will be populated dynamically by JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: MULTI-AGENT WORKFLOW & PIPELINE    -->
+    <!-- ========================================== -->
+    <div id="view-pipeline" class="view-panel hidden space-y-6">
+      
+      <!-- Filter Bar -->
+      <div class="bg-surface-850 border border-surface-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active View:</span>
+          <select id="pipeline-filter-job" onchange="filterPipeline()" class="bg-surface-800 border border-surface-700 rounded-lg text-xs text-white px-3 py-1.5 focus:outline-none focus:border-indigo-500">
+            <option value="ALL">All Requisitions (14 Candidates)</option>
+            <option value="REQ-8021" selected>REQ-8021: Staff Distributed Systems Engineer (P0)</option>
+            <option value="REQ-7940">REQ-7940: Lead AI / ML Evaluation Scientist (P1)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center space-x-3 text-xs">
+          <span class="text-slate-400">Context Flow:</span>
+          <span class="px-2.5 py-1 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">Sourcing ➔ Screening ➔ Outreach ➔ Scheduling ➔ Recruiter Handoff</span>
+        </div>
+      </div>
+
+      <!-- 4-Stage Kanban Pipeline -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="kanban-columns">
+        
+        <!-- STAGE 1: SOURCING -->
+        <div class="bg-surface-850 border border-surface-700 rounded-xl p-4 flex flex-col min-h-[550px]">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-700/80 mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider">1. Sourcing Agent</h3>
+            </div>
+            <span id="col-count-sourcing" class="px-2 py-0.5 text-xs bg-surface-750 text-slate-300 rounded-full font-semibold">4</span>
+          </div>
+          <div id="col-sourcing" class="space-y-3 flex-1 overflow-y-auto">
+            <!-- Candidate cards injected by JS -->
+          </div>
+        </div>
+
+        <!-- STAGE 2: VERIFICATION & SCREENING -->
+        <div class="bg-surface-850 border border-surface-700 rounded-xl p-4 flex flex-col min-h-[550px]">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-700/80 mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider">2. Verification Agent</h3>
+            </div>
+            <span id="col-count-verification" class="px-2 py-0.5 text-xs bg-surface-750 text-slate-300 rounded-full font-semibold">4</span>
+          </div>
+          <div id="col-verification" class="space-y-3 flex-1 overflow-y-auto">
+            <!-- Candidate cards injected by JS -->
+          </div>
+        </div>
+
+        <!-- STAGE 3: OUTREACH & ENGAGEMENT -->
+        <div class="bg-surface-850 border border-surface-700 rounded-xl p-4 flex flex-col min-h-[550px]">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-700/80 mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider">3. Outreach Agent</h3>
+            </div>
+            <span id="col-count-outreach" class="px-2 py-0.5 text-xs bg-surface-750 text-slate-300 rounded-full font-semibold">3</span>
+          </div>
+          <div id="col-outreach" class="space-y-3 flex-1 overflow-y-auto">
+            <!-- Candidate cards injected by JS -->
+          </div>
+        </div>
+
+        <!-- STAGE 4: SCHEDULING & HUMAN HANDOFF -->
+        <div class="bg-surface-850 border border-surface-700 rounded-xl p-4 flex flex-col min-h-[550px]">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-700/80 mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider">4. Recruiter Shortlist</h3>
+            </div>
+            <span id="col-count-shortlisted" class="px-2 py-0.5 text-xs bg-surface-750 text-emerald-300 rounded-full font-semibold">3</span>
+          </div>
+          <div id="col-shortlisted" class="space-y-3 flex-1 overflow-y-auto">
+            <!-- Candidate cards injected by JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: HITL EXCEPTIONS & APPROVALS        -->
+    <!-- ========================================== -->
+    <div id="view-hitl" class="view-panel hidden space-y-6">
+      
+      <div class="bg-surface-850 border border-amber-500/30 rounded-xl p-5 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </span>
+              <div>
+                <h2 class="text-base font-bold text-white">Human-in-the-Loop (HITL) Exception Action Center</h2>
+                <p class="text-xs text-slate-400">AI Agents autonomously pause and escalate borderline decisions, sentiment anomalies, and sensitive outreach drafts</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3 text-xs">
+            <span class="text-slate-400">Escalation Threshold:</span>
+            <span class="px-2 py-1 rounded bg-surface-800 text-amber-300 border border-surface-700 font-mono">Confidence &lt; 75% or Sentiment Alert</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Exceptions List -->
+      <div id="hitl-queue-container" class="space-y-4">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: AGENT & HUMAN RESOURCE REGISTRY    -->
+    <!-- ========================================== -->
+    <div id="view-registry" class="view-panel hidden space-y-6">
+      
+      <div class="bg-surface-850 border border-surface-700 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Resource Directory: AI Agents & Human Recruiters</h2>
+            <p class="text-xs text-slate-400">Roles, capabilities, autonomy permissions, capacity limits, and performance SLA metrics</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="openRegisterAgentModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition flex items-center space-x-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>Register New Agent</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-surface-700 text-slate-400 font-semibold uppercase tracking-wider">
+                <th class="py-3 px-4">Entity & Name</th>
+                <th class="py-3 px-4">Type</th>
+                <th class="py-3 px-4">Specialization</th>
+                <th class="py-3 px-4">Autonomy / Permissions</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Throughput / Load</th>
+                <th class="py-3 px-4">Quality / SLA</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="registry-table-body" class="divide-y divide-surface-700/60">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- VIEW 5: FUNNEL ANALYTICS                   -->
+    <!-- ========================================== -->
+    <div id="view-analytics" class="view-panel hidden space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Funnel Conversion Stages -->
+        <div class="lg:col-span-2 bg-surface-850 border border-surface-700 rounded-xl p-5 shadow-sm space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-bold text-white uppercase tracking-wider">Autonomous Candidate Funnel Conversion</h2>
+              <p class="text-xs text-slate-400">End-to-end throughput from profile discovery to recruiter interview</p>
+            </div>
+            <span class="text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">Overall Yield: 14.1%</span>
+          </div>
+
+          <!-- Funnel Visual Bars -->
+          <div class="space-y-4 pt-2">
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium flex items-center">
+                  <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-2"></span> 1. Profiles Discovered (Sourcing Agent)
+                </span>
+                <span class="text-white font-bold">128 candidates <span class="text-slate-400 font-normal">(100%)</span></span>
+              </div>
+              <div class="w-full bg-surface-800 h-3 rounded-full overflow-hidden">
+                <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium flex items-center">
+                  <span class="w-2.5 h-2.5 rounded-full bg-purple-500 mr-2"></span> 2. Skills & Tenure Verified (Verification Agent)
+                </span>
+                <span class="text-white font-bold">78 candidates <span class="text-slate-400 font-normal">(60.9%)</span></span>
+              </div>
+              <div class="w-full bg-surface-800 h-3 rounded-full overflow-hidden">
+                <div class="bg-purple-500 h-full rounded-full transition-all duration-500" style="width: 61%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium flex items-center">
+                  <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 mr-2"></span> 3. Personalized Outreach Sent (Outreach Agent)
+                </span>
+                <span class="text-white font-bold">42 candidates <span class="text-slate-400 font-normal">(32.8%)</span></span>
+              </div>
+              <div class="w-full bg-surface-800 h-3 rounded-full overflow-hidden">
+                <div class="bg-cyan-500 h-full rounded-full transition-all duration-500" style="width: 33%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium flex items-center">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span> 4. Positive Response / Engagement
+                </span>
+                <span class="text-white font-bold">25 candidates <span class="text-slate-400 font-normal">(19.5%)</span></span>
+              </div>
+              <div class="w-full bg-surface-800 h-3 rounded-full overflow-hidden">
+                <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: 20%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium flex items-center">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span> 5. Interview Shortlisted & Scheduled
+                </span>
+                <span class="text-white font-bold">18 candidates <span class="text-emerald-400 font-semibold">(14.1%)</span></span>
+              </div>
+              <div class="w-full bg-surface-800 h-3 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 14.1%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Productivity & Cost Efficiency -->
+        <div class="bg-surface-850 border border-surface-700 rounded-xl p-5 shadow-sm space-y-4">
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Efficiency & Velocity Gains</h2>
+          <p class="text-xs text-slate-400">Benchmarked against traditional manual recruiting workflows</p>
+
+          <div class="space-y-4 pt-2 text-xs">
+            <div class="p-3 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-between">
+              <div>
+                <p class="text-slate-400">Time-to-Shortlist</p>
+                <p class="text-lg font-bold text-emerald-400">1.8 Days <span class="text-xs text-slate-400 line-through">14 Days</span></p>
+              </div>
+              <span class="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">-87% time</span>
+            </div>
+
+            <div class="p-3 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-between">
+              <div>
+                <p class="text-slate-400">Recruiter Hours Saved / Week</p>
+                <p class="text-lg font-bold text-indigo-400">32.4 hrs / recruiter</p>
+              </div>
+              <span class="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 font-bold">4.2x ROI</span>
+            </div>
+
+            <div class="p-3 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-between">
+              <div>
+                <p class="text-slate-400">HITL Intervention Rate</p>
+                <p class="text-lg font-bold text-amber-400">12.5% of cases</p>
+              </div>
+              <span class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 font-bold">87.5% Autonomy</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- VIEW 6: AUDIT TIMELINE & OBSERVABILITY     -->
+    <!-- ========================================== -->
+    <div id="view-audit" class="view-panel hidden space-y-6">
+      
+      <div class="bg-surface-850 border border-surface-700 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold text-white">Full Auditable Decision Timeline</h2>
+            <p class="text-xs text-slate-400">Immutable trace of agent actions, LLM reasoning outputs, human overrides, and handoff events</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <select id="audit-filter" onchange="filterAuditLogs()" class="bg-surface-800 border border-surface-700 rounded-lg text-xs text-slate-300 px-3 py-1.5 focus:outline-none">
+              <option value="ALL">All Event Types</option>
+              <option value="SOURCED">Sourcing Events</option>
+              <option value="VERIFIED">Verification Events</option>
+              <option value="EXCEPTION">Exceptions & Overrides</option>
+              <option value="HANDOFF">Handoffs & Scheduling</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="relative border-l-2 border-surface-700 ml-4 space-y-6 pl-6 py-2" id="full-audit-timeline">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL: CANDIDATE DOSSIER & CONTEXT INSPECT -->
+  <!-- ========================================== -->
+  <div id="candidate-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface-850 border border-surface-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-5">
+      
+      <div class="flex items-start justify-between pb-4 border-b border-surface-700">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h3 id="modal-candidate-name" class="text-lg font-bold text-white">Candidate Name</h3>
+            <span id="modal-match-badge" class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">92% Match</span>
+          </div>
+          <p id="modal-candidate-role" class="text-xs text-slate-400">Target Role • Sourced from GitHub</p>
+        </div>
+        <button onclick="closeCandidateModal()" class="text-slate-400 hover:text-white p-1 rounded-lg bg-surface-800 border border-surface-700">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Preserved Multi-Agent Context Accordion -->
+      <div class="space-y-4 text-xs">
+        
+        <!-- Sourcing Context -->
+        <div class="p-3 rounded-lg bg-surface-800 border border-surface-700 space-y-1">
+          <div class="flex items-center justify-between text-indigo-400 font-semibold">
+            <span>Stage 1: Sourcing Agent Output</span>
+            <span id="modal-sourcing-time" class="text-slate-400 font-normal">10:14 AM</span>
+          </div>
+          <p id="modal-sourcing-notes" class="text-slate-300">Discovered via GitHub search query (repos with distributed-consensus, raft, go).</p>
+          <div id="modal-sourcing-tags" class="flex flex-wrap gap-1 pt-1"></div>
+        </div>
+
+        <!-- Verification Context -->
+        <div class="p-3 rounded-lg bg-surface-800 border border-surface-700 space-y-1">
+          <div class="flex items-center justify-between text-purple-400 font-semibold">
+            <span>Stage 2: Verification Agent Output</span>
+            <span id="modal-verification-score" class="text-slate-400 font-normal">Score: 92/100</span>
+          </div>
+          <p id="modal-verification-notes" class="text-slate-300">Verified 6+ years at high-scale infrastructure companies. Author of 2 open-source consensus implementations.</p>
+        </div>
+
+        <!-- Outreach Context -->
+        <div class="p-3 rounded-lg bg-surface-800 border border-surface-700 space-y-2">
+          <div class="flex items-center justify-between text-cyan-400 font-semibold">
+            <span>Stage 3: Outreach Agent Context & Draft</span>
+            <span id="modal-outreach-status" class="text-amber-400">Status: Sent / Responded</span>
+          </div>
+          <div class="p-2.5 rounded bg-surface-900 border border-surface-750 font-mono text-slate-300 whitespace-pre-wrap" id="modal-outreach-draft">
+            "Hi Elena, noticed your work on distributed log replication in Go..."
+          </div>
+        </div>
+
+        <!-- Scheduling / Final Handoff -->
+        <div class="p-3 rounded-lg bg-surface-800 border border-surface-700 space-y-1">
+          <div class="flex items-center justify-between text-emerald-400 font-semibold">
+            <span>Stage 4: Scheduling & Recruiter Handoff</span>
+            <span id="modal-scheduling-status" class="text-emerald-300 font-medium">Interview Booked</span>
+          </div>
+          <p id="modal-scheduling-notes" class="text-slate-300">Technical deep dive confirmed with Lead Systems Architect on Thursday at 2:00 PM PST.</p>
+        </div>
+
+      </div>
+
+      <div class="flex justify-end space-x-3 pt-3 border-t border-surface-700">
+        <button onclick="syncCandidateToATS()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <span>Push to Greenhouse ATS</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- APPLICATION STATE & CONTROLLER LOGIC       -->
+  <!-- ========================================== -->
+  <script>
+    // --- Initial Mock Data ---
+    const APP_STATE = {
+      candidates: [
+        {
+          id: 'CAND-101',
+          name: 'Elena Rostova',
+          role: 'Staff Distributed Systems Engineer',
+          reqId: 'REQ-8021',
+          stage: 'shortlisted',
+          matchScore: 94,
+          source: 'GitHub',
+          skills: ['Go', 'Raft', 'Kubernetes', 'Distributed Storage'],
+          verificationNotes: 'Verified 7 yrs experience at Datadog & Red Hat. Primary maintainer of distributed consensus library.',
+          outreachDraft: "Hi Elena,\n\nI was impressed by your recent talk on Raft log compaction. We're scaling our distributed core infrastructure and would love to discuss our architectural roadmap with you.",
+          outreachStatus: 'Replied: Interested',
+          schedulingNotes: 'Interview confirmed with Engineering VP for Thursday 2:00 PM EST.',
+          hitlException: null
+        },
+        {
+          id: 'CAND-102',
+          name: 'Marcus Vance',
+          role: 'Staff Distributed Systems Engineer',
+          reqId: 'REQ-8021',
+          stage: 'outreach',
+          matchScore: 89,
+          source: 'LinkedIn',
+          skills: ['Rust', 'Paxos', 'Distributed DBs', 'C++'],
+          verificationNotes: 'Ex-CockroachDB engineer. High code verification index.',
+          outreachDraft: "Hi Marcus, loved your deep-dive article on lock-free multi-paxos. Let's connect regarding our new storage engine initiative.",
+          outreachStatus: 'Outreach Dispatched (2 hrs ago)',
+          schedulingNotes: 'Awaiting candidate slot selection.',
+          hitlException: null
+        },
+        {
+          id: 'CAND-103',
+          name: 'Devon Patel',
+          role: 'Staff Distributed Systems Engineer',
+          reqId: 'REQ-8021',
+          stage: 'verification',
+          matchScore: 68,
+          source: 'StackOverflow',
+          skills: ['Go', 'Kafka', 'Redis', 'AWS'],
+          verificationNotes: 'Borderline match: strong message queuing background, but limited multi-node consensus experience.',
+          outreachDraft: 'Drafting pending recruiter approval.',
+          outreachStatus: 'Held in HITL Queue',
+          schedulingNotes: 'Unscheduled',
+          hitlException: {
+            type: 'LOW_CONFIDENCE',
+            title: 'Borderline Match Score (68%)',
+            description: 'Candidate possesses strong backend queuing experience but lacks formal Raft/Paxos experience required for REQ-8021.',
+            actionNeeded: 'Approve to proceed with outreach or reject from requisition.'
+          }
+        },
+        {
+          id: 'CAND-104',
+          name: 'Sophia Lindqvist',
+          role: 'Staff Distributed Systems Engineer',
+          reqId: 'REQ-8021',
+          stage: 'outreach',
+          matchScore: 91,
+          source: 'GitHub',
+          skills: ['Rust', 'gRPC', 'Distributed Tracing', 'Linux eBPF'],
+          verificationNotes: 'Verified contributor to CNCF OpenTelemetry. 8 years systems engineering.',
+          outreachDraft: "Hi Sophia,\n\nYour work on eBPF-based distributed tracing caught our eye. We are redesigning our control plane telemetry and thought your expertise would be invaluable.",
+          outreachStatus: 'Flagged for Recruiter Review',
+          schedulingNotes: 'Unscheduled',
+          hitlException: {
+            type: 'OUTREACH_REVIEW',
+            title: 'Outreach Template Approval (Executive Candidate)',
+            description: 'Candidate is a Principal Engineer at Snowflake; company policy mandates recruiter sign-off before automated email dispatch.',
+            actionNeeded: 'Review email tone and personalize opening hook.'
+          }
+        },
+        {
+          id: 'CAND-105',
+          name: 'Liam Chen',
+          role: 'Lead AI / ML Evaluation Scientist',
+          reqId: 'REQ-7940',
+          stage: 'sourcing',
+          matchScore: 87,
+          source: 'ArXiv / HuggingFace',
+          skills: ['PyTorch', 'LLM Benchmarking', 'RLHF', 'Python'],
+          verificationNotes: 'Author of 3 papers on automated hallucination detection in generative agents.',
+          outreachDraft: 'Queued for generation.',
+          outreachStatus: 'Pending',
+          schedulingNotes: 'Unscheduled',
+          hitlException: null
+        },
+        {
+          id: 'CAND-106',
+          name: 'Amara Okafor',
+          role: 'Staff Distributed Systems Engineer',
+          reqId: 'REQ-8021',
+          stage: 'shortlisted',
+          matchScore: 95,
+          source: 'Referral',
+          skills: ['Go', 'Consensus', 'Cloud Architecture'],
+          verificationNotes: 'Former Lead at Fastly. 100% skill match.',
+          outreachDraft: 'Personal outreach sent by Sarah Chen.',
+          outreachStatus: 'Replied: Scheduling',
+          schedulingNotes: 'Screening call booked for Tomorrow at 11:00 AM.',
+          hitlException: null
+        }
+      ],
+
+      agents: [
+        { id: 'AGT-01', name: 'Sourcing Agent Alpha', type: 'AI Agent', specialization: 'GitHub / LinkedIn Profile Mining', autonomy: 'Full Autonomous', status: 'Active', throughput: '48 / hr', quality: '94% Recall' },
+        { id: 'AGT-02', name: 'Verification Agent Beta', type: 'AI Agent', specialization: 'Codebase & Experience Validation', autonomy: 'Supervised (HITL &lt; 75%)', status: 'Active', throughput: '36 / hr', quality: '96% Accuracy' },
+        { id: 'AGT-03', name: 'Outreach Agent Gamma', type: 'AI Agent', specialization: 'Hyper-personalized Messaging', autonomy: 'HITL Review on Execs', status: 'Awaiting HITL', throughput: '24 / hr', quality: '42% Reply Rate' },
+        { id: 'AGT-04', name: 'Scheduling Agent Delta', type: 'AI Agent', specialization: 'Calendar Sync & Rescheduling', autonomy: 'Full Autonomous', status: 'Active', throughput: '18 / hr', quality: '99% SLA' },
+        { id: 'AGT-05', name: 'Market Intel Agent', type: 'AI Agent', specialization: 'Salary Benchmarking & Talent Pools', autonomy: 'Autonomous', status: 'Idle', throughput: 'On-demand', quality: '100% Data Freshness' },
+        { id: 'HUM-01', name: 'Sarah Chen', type: 'Human Recruiter', specialization: 'Lead Tech Recruiter (Infrastructure)', autonomy: 'Full Admin', status: 'Online', throughput: 'Active on 2 Jobs', quality: '100% SLA Met' },
+        { id: 'HUM-02', name: 'Alex Rivera', type: 'Human Recruiter', specialization: 'AI / Research Talent Partner', autonomy: 'Full Admin', status: 'Online', throughput: 'Active on 1 Job', quality: '98% SLA Met' },
+        { id: 'HUM-03', name: 'David Kim', type: 'Human Recruiter', specialization: 'Design & Product Recruiter', autonomy: 'Full Admin', status: 'In Meeting', throughput: 'Active on 1 Job', quality: '95% SLA Met' }
+      ],
+
+      auditLogs: [
+        { time: '12:02:14 PM', type: 'EXCEPTION', agent: 'Verification Agent Beta', details: 'Triggered HITL flag for Devon Patel (Match: 68%, below 75% threshold).' },
+        { time: '11:58:30 AM', type: 'HANDOFF', agent: 'Scheduling Agent Delta', details: 'Booked interview for Elena Rostova with VP of Eng for REQ-8021.' },
+        { time: '11:45:10 AM', type: 'OUTREACH', agent: 'Outreach Agent Gamma', details: 'Generated personalized email draft for Marcus Vance referencing Paxos whitepaper.' },
+        { time: '11:32:00 AM', type: 'VERIFIED', agent: 'Verification Agent Beta', details: 'Completed commit audit for Marcus Vance (Score: 89%). Passed to Outreach.' },
+        { time: '11:15:22 AM', type: 'SOURCED', agent: 'Sourcing Agent Alpha', details: 'Ingested 8 candidate profiles from GitHub topic: distributed-consensus.' }
+      ]
+    };
+
+    // --- Tab Switching ---
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-indigo-500', 'text-indigo-400', 'font-semibold');
+        btn.classList.add('border-transparent', 'text-slate-400');
+      });
+
+      const activeView = document.getElementById(`view-${tabId}`);
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (activeView) activeView.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-slate-400');
+        activeBtn.classList.add('border-indigo-500', 'text-indigo-400', 'font-semibold');
+      }
+    }
+
+    // --- Toast Notifications ---
+    function showToast(title, message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-xl border shadow-xl flex items-start space-x-3 max-w-sm pointer-events-auto transition transform duration-300 translate-y-2 opacity-0 ${
+        type === 'warning' ? 'bg-amber-950/90 border-amber-500/50 text-amber-200' :
+        type === 'success' ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200' :
+        'bg-surface-800 border-indigo-500/40 text-slate-100'
+      }`;
+
+      toast.innerHTML = `
+        <div class="flex-shrink-0 mt-0.5">
+          ${type === 'warning' ? '<svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' :
+            '<svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'}
+        </div>
+        <div class="flex-1 text-xs">
+          <p class="font-bold text-white">${title}</p>
+          <p class="mt-0.5 text-slate-300">${message}</p>
+        </div>
+      `;
+
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4500);
+    }
+
+    // --- Render Pipeline Cards ---
+    function renderPipeline() {
+      const cols = {
+        sourcing: document.getElementById('col-sourcing'),
+        verification: document.getElementById('col-verification'),
+        outreach: document.getElementById('col-outreach'),
+        shortlisted: document.getElementById('col-shortlisted')
+      };
+
+      const counts = { sourcing: 0, verification: 0, outreach: 0, shortlisted: 0 };
+      Object.values(cols).forEach(col => col.innerHTML = '');
+
+      const filterJob = document.getElementById('pipeline-filter-job')?.value || 'ALL';
+
+      APP_STATE.candidates.forEach(cand => {
+        if (filterJob !== 'ALL' && cand.reqId !== filterJob) return;
+
+        counts[cand.stage] = (counts[cand.stage] || 0) + 1;
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-lg bg-surface-800 border cursor-pointer hover:border-indigo-500/80 transition shadow-sm space-y-2 ${
+          cand.hitlException ? 'border-amber-500/60 bg-amber-950/10' : 'border-surface-700'
+        }`;
+        card.onclick = () => openCandidateModal(cand.id);
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-xs font-bold text-white">${cand.name}</p>
+              <p class="text-[11px] text-slate-400 truncate max-w-[170px]">${cand.role}</p>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${
+              cand.matchScore >= 90 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+              cand.matchScore >= 75 ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' :
+              'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+            }">${cand.matchScore}%</span>
+          </div>
+
+          <div class="flex flex-wrap gap-1">
+            ${cand.skills.slice(0, 2).map(s => `<span class="px-1.5 py-0.5 rounded bg-surface-750 text-slate-300 text-[10px]">${s}</span>`).join('')}
+            ${cand.skills.length > 2 ? `<span class="px-1 py-0.5 rounded bg-surface-750 text-slate-400 text-[10px]">+${cand.skills.length - 2}</span>` : ''}
+          </div>
+
+          ${cand.hitlException ? `
+            <div class="mt-2 p-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 flex items-center space-x-1">
+              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <span class="truncate font-semibold">HITL: ${cand.hitlException.title}</span>
+            </div>
+          ` : ''}
+
+          <div class="pt-1.5 border-t border-surface-700/60 flex items-center justify-between text-[11px] text-slate-400">
+            <span>${cand.source}</span>
+            <span class="text-indigo-400 hover:text-indigo-300">Inspect Dossier →</span>
+          </div>
+        `;
+
+        if (cols[cand.stage]) {
+          cols[cand.stage].appendChild(card);
+        }
+      });
+
+      // Update Counts
+      document.getElementById('col-count-sourcing').innerText = counts.sourcing;
+      document.getElementById('col-count-verification').innerText = counts.verification;
+      document.getElementById('col-count-outreach').innerText = counts.outreach;
+      document.getElementById('col-count-shortlisted').innerText = counts.shortlisted;
+      document.getElementById('pipeline-count-badge').innerText = APP_STATE.candidates.length;
+    }
+
+    function filterPipeline() {
+      renderPipeline();
+    }
+
+    // --- Render HITL Exception Queue ---
+    function renderHITLQueue() {
+      const container = document.getElementById('hitl-queue-container');
+      container.innerHTML = '';
+
+      const exceptions = APP_STATE.candidates.filter(c => c.hitlException !== null);
+
+      // Update Badges
+      const count = exceptions.length;
+      document.getElementById('nav-badge-hitl').innerText = count;
+      document.getElementById('top-badge-hitl').innerText = count;
+      document.getElementById('metric-hitl-count').innerText = count;
+
+      if (count === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-surface-850 border border-surface-700 rounded-xl space-y-2">
+            <svg class="w-10 h-10 text-emerald-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="font-bold text-white text-sm">All Exceptions Cleared</p>
+            <p class="text-xs text-slate-400">Agents are operating smoothly within autonomous confidence guardrails.</p>
+          </div>
+        `;
+        return;
+      }
+
+      exceptions.forEach(cand => {
+        const item = document.createElement('div');
+        item.className = 'p-5 rounded-xl bg-surface-850 border border-amber-500/40 shadow-sm space-y-4';
+        item.innerHTML = `
+          <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  ${cand.hitlException.type}
+                </span>
+                <h3 class="text-sm font-bold text-white">${cand.hitlException.title}</h3>
+                <span class="text-xs text-slate-400">Candidate: <strong class="text-indigo-300">${cand.name}</strong> (${cand.matchScore}% Score)</span>
+              </div>
+              <p class="text-xs text-slate-300">${cand.hitlException.description}</p>
+              <p class="text-xs text-amber-200/90 font-medium">Required Action: ${cand.hitlException.actionNeeded}</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="openCandidateModal('${cand.id}')" class="px-3 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-750 text-slate-300 border border-surface-700 text-xs transition">
+                View Full Dossier
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-surface-700/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="text-slate-400">
+              Assigned Job: <strong class="text-white">${cand.reqId}</strong> | Escalated by: <span class="text-indigo-400">Verification Agent Beta</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="resolveHITL('${cand.id}', 'REJECT')" class="px-3.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-medium transition">
+                Reject Candidate
+              </button>
+              <button onclick="resolveHITL('${cand.id}', 'APPROVE')" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center space-x-1.5 shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Approve & Proceed</span>
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function resolveHITL(candId, decision) {
+      const cand = APP_STATE.candidates.find(c => c.id === candId);
+      if (!cand) return;
+
+      if (decision === 'APPROVE') {
+        cand.hitlException = null;
+        if (cand.stage === 'verification') cand.stage = 'outreach';
+        else if (cand.stage === 'outreach') cand.stage = 'shortlisted';
+
+        logAudit('HUMAN_OVERRIDE', 'Recruiter Sarah Chen', `Approved exception for ${cand.name}. Advanced to ${cand.stage}.`);
+        showToast('Exception Approved', `${cand.name} approved by recruiter and advanced to ${cand.stage}.`, 'success');
+      } else {
+        APP_STATE.candidates = APP_STATE.candidates.filter(c => c.id !== candId);
+        logAudit('HUMAN_REJECT', 'Recruiter Sarah Chen', `Rejected candidate ${cand.name} based on exception review.`);
+        showToast('Candidate Rejected', `${cand.name} removed from active requisition pipeline.`, 'warning');
+      }
+
+      renderPipeline();
+      renderHITLQueue();
+      renderAuditTimeline();
+    }
+
+    // --- Render Registry Table ---
+    function renderRegistry() {
+      const tbody = document.getElementById('registry-table-body');
+      tbody.innerHTML = '';
+
+      APP_STATE.agents.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-surface-800/50 transition';
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-bold text-white flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full ${item.status === 'Active' || item.status === 'Online' ? 'bg-emerald-400' : item.status === 'Awaiting HITL' ? 'bg-amber-400' : 'bg-slate-500'}"></span>
+            <span>${item.name}</span>
+          </td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded text-[11px] font-medium ${item.type === 'AI Agent' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'}">
+              ${item.type}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-300">${item.specialization}</td>
+          <td class="py-3 px-4 text-slate-300 font-mono">${item.autonomy}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded text-[11px] font-semibold ${item.status === 'Active' || item.status === 'Online' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-surface-750 text-slate-300'}">
+              ${item.status}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-300">${item.throughput}</td>
+          <td class="py-3 px-4 text-emerald-400 font-semibold">${item.quality}</td>
+          <td class="py-3 px-4 text-right">
+            <button onclick="toggleAgentStatus('${item.id}')" class="text-indigo-400 hover:text-indigo-300 font-medium">Configure</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleAgentStatus(id) {
+      showToast('Agent Configuration', `Permissions & capacity updated for ${id}.`, 'info');
+    }
+
+    function openRegisterAgentModal() {
+      showToast('Register Agent', 'Opened agent onboarding wizard.', 'info');
+    }
+
+    // --- Render Audit Log & Timeline ---
+    function logAudit(type, agent, details) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      APP_STATE.auditLogs.unshift({ time: timeStr, type, agent, details });
+      renderAuditTimeline();
+      renderDashboardFeed();
+    }
+
+    function renderDashboardFeed() {
+      const feed = document.getElementById('dashboard-feed-container');
+      feed.innerHTML = '';
+
+      APP_STATE.auditLogs.slice(0, 5).forEach(log => {
+        const item = document.createElement('div');
+        item.className = 'p-3 rounded-lg bg-surface-800 border border-surface-700/80 text-xs space-y-1 transition hover:border-surface-600';
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-indigo-300">${log.agent}</span>
+            <span class="text-slate-400 font-mono text-[10px]">${log.time}</span>
+          </div>
+          <p class="text-slate-300 text-[11px]">${log.details}</p>
+        `;
+        feed.appendChild(item);
+      });
+    }
+
+    function renderAuditTimeline() {
+      const timeline = document.getElementById('full-audit-timeline');
+      timeline.innerHTML = '';
+
+      const filter = document.getElementById('audit-filter')?.value || 'ALL';
+
+      APP_STATE.auditLogs.forEach(log => {
+        if (filter !== 'ALL' && !log.type.includes(filter)) return;
+
+        const node = document.createElement('div');
+        node.className = 'relative group';
+        node.innerHTML = `
+          <span class="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full bg-indigo-500 border-2 border-surface-900 group-hover:scale-125 transition"></span>
+          <div class="bg-surface-800 border border-surface-700/80 rounded-lg p-3 space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-white flex items-center space-x-2">
+                <span class="px-1.5 py-0.2 rounded text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">${log.type}</span>
+                <span>${log.agent}</span>
+              </span>
+              <span class="text-slate-400 font-mono text-[11px]">${log.time}</span>
+            </div>
+            <p class="text-xs text-slate-300">${log.details}</p>
+          </div>
+        `;
+        timeline.appendChild(node);
+      });
+    }
+
+    function filterAuditLogs() {
+      renderAuditTimeline();
+    }
+
+    // --- Candidate Dossier Modal ---
+    function openCandidateModal(candId) {
+      const cand = APP_STATE.candidates.find(c => c.id === candId);
+      if (!cand) return;
+
+      document.getElementById('modal-candidate-name').innerText = cand.name;
+      document.getElementById('modal-candidate-role').innerText = `${cand.role} • ${cand.reqId}`;
+      document.getElementById('modal-match-badge').innerText = `${cand.matchScore}% Match`;
+
+      document.getElementById('modal-sourcing-notes').innerText = `Discovered via ${cand.source}. Candidate profiles matched targeting criteria for high concurrency infrastructure.`;
+      const tagsContainer = document.getElementById('modal-sourcing-tags');
+      tagsContainer.innerHTML = cand.skills.map(s => `<span class="px-2 py-0.5 rounded bg-surface-750 text-indigo-300 text-[10px] font-medium">${s}</span>`).join('');
+
+      document.getElementById('modal-verification-score').innerText = `Confidence Score: ${cand.matchScore}/100`;
+      document.getElementById('modal-verification-notes').innerText = cand.verificationNotes;
+
+      document.getElementById('modal-outreach-status').innerText = cand.outreachStatus;
+      document.getElementById('modal-outreach-draft').innerText = cand.outreachDraft;
+
+      document.getElementById('modal-scheduling-notes').innerText = cand.schedulingNotes;
+
+      document.getElementById('candidate-modal').classList.remove('hidden');
+    }
+
+    function closeCandidateModal() {
+      document.getElementById('candidate-modal').classList.add('hidden');
+    }
+
+    function syncCandidateToATS() {
+      showToast('ATS Synchronization', 'Dossier, interview notes, and audit history exported to Greenhouse ATS.', 'success');
+      closeCandidateModal();
+    }
+
+    // --- Interactive Live Multi-Agent Simulation Engine ---
+    let simStep = 0;
+    function simulateFullPipeline() {
+      const simBtn = document.getElementById('btn-trigger-sim');
+      simBtn.disabled = true;
+      simBtn.innerHTML = `
+        <svg class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+        <span>Orchestrating Agents...</span>
+      `;
+
+      showToast('Simulation Started', 'Triggering multi-agent workflow for REQ-8021 (Staff Distributed Systems Engineer)...', 'info');
+
+      // Step 1: Sourcing Agent discovers new candidate
+      setTimeout(() => {
+        const newCand = {
+          id: `CAND-${Date.now().toString().slice(-3)}`,
+          name: 'Zane Gallagher',
+          role: 'Staff Distributed Systems Engineer',
+          reqId: 'REQ-8021',
+          stage: 'sourcing',
+          matchScore: 92,
+          source: 'GitHub OpenSource',
+          skills: ['Go', 'Raft', 'Distributed Tracing', 'etcd'],
+          verificationNotes: 'Analyzing public pull requests on etcd repository...',
+          outreachDraft: 'Drafting personalized outreach...',
+          outreachStatus: 'Queued',
+          schedulingNotes: 'Pending',
+          hitlException: null
+        };
+        APP_STATE.candidates.unshift(newCand);
+        logAudit('SOURCED', 'Sourcing Agent Alpha', `Discovered ${newCand.name} on GitHub (Repo: etcd-io).`);
+        renderPipeline();
+        showToast('Agent 1 Sourced Candidate', `Sourcing Agent discovered ${newCand.name} matching REQ-8021.`, 'info');
+
+        // Step 2: Verification Agent Evaluates Candidate
+        setTimeout(() => {
+          newCand.stage = 'verification';
+          newCand.verificationNotes = 'Verified 8 years systems engineering. 450+ commits across high-concurrency projects.';
+          logAudit('VERIFIED', 'Verification Agent Beta', `Validated skills & work history for ${newCand.name}. Match score: 92%.`);
+          renderPipeline();
+          showToast('Agent 2 Verified Skills', `Verification Agent validated ${newCand.name} with 92% match score.`, 'info');
+
+          // Step 3: Outreach Agent Drafts Email and flags an Exception (HITL)
+          setTimeout(() => {
+            newCand.stage = 'outreach';
+            newCand.outreachDraft = "Hi Zane,\n\nWe saw your recent PR on leader-election timeouts in etcd. Our distributed storage team is tackling similar problems at petabyte scale—would you be open to an exploratory chat?";
+            newCand.hitlException = {
+              type: 'OUTREACH_CONFIRMATION',
+              title: 'Review Outreach to Lead Open Source Contributor',
+              description: `Candidate is a primary contributor to etcd. Control policy requires human recruiter review before message dispatch.`,
+              actionNeeded: 'Verify outreach tone and approve delivery.'
+            };
+            logAudit('EXCEPTION', 'Outreach Agent Gamma', `Flagged outreach draft for ${newCand.name} for human recruiter sign-off.`);
+            renderPipeline();
+            renderHITLQueue();
+            showToast('HITL Exception Triggered!', `Outreach Agent generated draft for ${newCand.name} and requested recruiter sign-off.`, 'warning');
+
+            // Reset simulation button
+            simBtn.disabled = false;
+            simBtn.innerHTML = `
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Run Live Simulation</span>
+            `;
+
+            // Switch to HITL view automatically to show the user the action item!
+            switchTab('hitl');
+          }, 2500);
+
+        }, 2200);
+
+      }, 1500);
+    }
+
+    function resetSimulation() {
+      location.reload();
+    }
+
+    function triggerUrgentDispatch(reqId) {
+      showToast('Urgent Dispatch', `Re-allocated 2 extra Sourcing instances to ${reqId}.`, 'info');
+      logAudit('DISPATCH', 'Control Tower Orchestrator', `Re-allocated Sourcing Agent instances to ${reqId} due to P0 SLA urgency.`);
+    }
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPipeline();
+      renderHITLQueue();
+      renderRegistry();
+      renderAuditTimeline();
+      renderDashboardFeed();
+    });
+  </script>
+</body>
+</html>
